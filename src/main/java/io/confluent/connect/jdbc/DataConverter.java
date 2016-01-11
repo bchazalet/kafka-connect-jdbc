@@ -273,12 +273,19 @@ public class DataConverter {
       }
 
       case Types.BIT: {
-        /**
-         * BIT should be either 0 or 1.
-         * TODO: Postgres handles this differently, returning a string "t" or "f". See the
-         * elasticsearch-jdbc plugin for an example of how this is handled
-         */
-        colValue = resultSet.getByte(col);
+        byte value;
+        try {
+          value = resultSet.getByte(col);
+         } catch (Exception e) {
+           String exceptionClassName = e.getClass().getName();
+           // postgresql can not handle boolean, it will throw PSQLException, something like "Bad value for type int : t"
+           if ("org.postgresql.util.PSQLException".equals(exceptionClassName)) {
+            value = (byte) ("t".equals(resultSet.getString(col)) ? 1 : 0);
+           } else {
+             throw e;
+           }
+         }
+        colValue = value;
         break;
       }
 
