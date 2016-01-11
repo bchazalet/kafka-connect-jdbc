@@ -97,7 +97,7 @@ public class DataConverter {
         log.warn("JDBC type {} not currently supported", sqlType);
         break;
       }
-
+      case Types.BIT:
       case Types.BOOLEAN: {
         if (optional) {
           builder.field(fieldName, Schema.OPTIONAL_BOOLEAN_SCHEMA);
@@ -108,7 +108,6 @@ public class DataConverter {
       }
 
       // ints <= 8 bits
-      case Types.BIT:
       case Types.TINYINT: {
         if (optional) {
           builder.field(fieldName, Schema.OPTIONAL_INT8_SCHEMA);
@@ -266,26 +265,9 @@ public class DataConverter {
         colValue = null;
         break;
       }
-
+      case Types.BIT:
       case Types.BOOLEAN: {
         colValue = resultSet.getBoolean(col);
-        break;
-      }
-
-      case Types.BIT: {
-        byte value;
-        try {
-          value = resultSet.getByte(col);
-         } catch (Exception e) {
-           String exceptionClassName = e.getClass().getName();
-           // postgresql can not handle boolean, it will throw PSQLException, something like "Bad value for type int : t"
-           if ("org.postgresql.util.PSQLException".equals(exceptionClassName)) {
-            value = (byte) ("t".equals(resultSet.getString(col)) ? 1 : 0);
-           } else {
-             throw e;
-           }
-         }
-        colValue = value;
         break;
       }
 
