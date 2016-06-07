@@ -29,6 +29,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -95,6 +96,9 @@ public class JdbcSourceConnectorTest {
     Connection conn = PowerMock.createMock(Connection.class);
     EasyMock.expect(DriverManager.getConnection(db.getUrl()))
         .andReturn(conn);
+    // Since we're just testing start/stop, we don't worry about the value here but need to stub
+    // something since the background thread will be started and try to lookup metadata.
+    EasyMock.expect(conn.getMetaData()).andStubThrow(new SQLException());
     conn.close();
     PowerMock.expectLastCall();
 
@@ -116,6 +120,20 @@ public class JdbcSourceConnectorTest {
     assertEquals(1, configs.size());
     assertTaskConfigsHaveParentConfigs(configs);
     assertEquals("test", configs.get(0).get(JdbcSourceTaskConfig.TABLES_CONFIG));
+    assertNull(configs.get(0).get(JdbcSourceTaskConfig.QUERY_CONFIG));
+    connector.stop();
+  }
+
+  @Test
+  public void testPartitioningTableAndViewView() throws Exception {
+    // Tests case where we have a table and a view of that table.
+    db.createTableAndView("test_table", "test_view", "id", "INT NOT NULL");
+    connector.start(connProps);
+    List<Map<String, String>> configs = connector.taskConfigs(10);
+    assertEquals(2, configs.size());
+    assertTaskConfigsHaveParentConfigs(configs);
+    assertEquals("test_table", configs.get(0).get(JdbcSourceTaskConfig.TABLES_CONFIG));
+    assertEquals("test_view", configs.get(1).get(JdbcSourceTaskConfig.TABLES_CONFIG));
     assertNull(configs.get(0).get(JdbcSourceTaskConfig.QUERY_CONFIG));
     connector.stop();
   }
